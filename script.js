@@ -3,7 +3,7 @@ let instellingen = {
   fastSeconds: 180, 
   slowSeconds: 180, 
   totalMinutes: 30,
-  startTempo: "snel", // Standaard starten met snel
+  startTempo: "snel", 
   voicePrompts: true,
   beeps: true,      
   vibrate: true     
@@ -16,12 +16,15 @@ let verstrekenSeconden = 0;
 let phaseSeconden = instellingen.fastSeconds;
 let huidigeSet = 1;
 let isFastPhase = true;
-let totaalSets = Math.ceil(totaalSeconden / (instellingen.fastSeconds + instellingen.slowSeconds)) * 2;
+let totaalSets = 5;
 
 let timerLoopt = false;
 let isAftellen = false;
 let interval;
 let aftelInterval; 
+
+// Mobiele audio-fix variabele
+let audioCtx = null;
 
 // ===== UI ELEMENTEN =====
 const mainTimer = document.getElementById("mainTimer");
@@ -50,7 +53,7 @@ const snelSecInput = document.getElementById("snelSeconden");
 const traagMinInput = document.getElementById("traagMinuten");
 const traagSecInput = document.getElementById("traagSeconden");
 
-// Schakel het instellingenpaneel (open/dicht) via tandwieltje
+// Schakel het instellingenpaneel open/dicht
 openSettings.addEventListener("click", () => {
   if (!timerLoopt) {
     settingsPanel.classList.toggle("open");
@@ -62,6 +65,26 @@ closeSettings.addEventListener("click", () => {
 });
 
 // ===== STEM, GELUID & TRILLEN FUNCTIES =====
+function activeerAudioOpGsm() {
+  // Maak de audiocontext aan of herstart hem bij de allereerste klik (vereist voor iOS/Android)
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+    // Korte spraak-trigger om speechSynthesis toestemming te geven op de achtergrond
+    if (instellingen.voicePrompts) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance("");
+      window.speechSynthesis.speak(u);
+    }
+  } catch (e) {
+    console.log("Audio initialisatie mislukt", e);
+  }
+}
+
 function spreekTekst(tekst) {
   if (!instellingen.voicePrompts) return;
   try {
@@ -75,14 +98,12 @@ function spreekTekst(tekst) {
   }
 }
 
-// Functie om de timer te resetten naar de beginwaarden op basis van instellingen
 function resetNaarBeginWaarden() {
   totaalSeconden = instellingen.totalMinutes * 60;
   resterendeSeconden = totaalSeconden;
   verstrekenSeconden = 0;
   huidigeSet = 1;
   
-  // Bepaal de startfase op basis van de instelling
   isFastPhase = (instellingen.startTempo === "snel");
   phaseSeconden = isFastPhase ? instellingen.fastSeconds : instellingen.slowSeconds;
   
@@ -92,7 +113,9 @@ function resetNaarBeginWaarden() {
 function speelPiep(frequentie = 880) {
   if (!instellingen.beeps) return;
   try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     oscillator.connect(gainNode);
@@ -101,7 +124,7 @@ function speelPiep(frequentie = 880) {
     oscillator.frequency.setValueAtTime(frequentie, audioCtx.currentTime); 
     gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
     oscillator.start();
-    setTimeout(() => { oscillator.stop(); audioCtx.close(); }, 300);
+    setTimeout(() => { oscillator.stop(); }, 300);
   } catch (e) {
     console.log("Audio niet ondersteund.");
   }
@@ -192,6 +215,9 @@ function startEchteTimer() {
 
 // ===== START / PAUSE =====
 startBtn.addEventListener("click", () => {
+  // FIX: Activeer direct audio bij de klik-gebeurtenis!
+  activeerAudioOpGsm();
+
   if (!timerLoopt) {
     timerLoopt = true;
     isAftellen = true;
@@ -233,6 +259,7 @@ startBtn.addEventListener("click", () => {
 
 // ===== RESET =====
 resetBtn.addEventListener("click", () => {
+  activeerAudioOpGsm();
   clearInterval(interval);
   clearInterval(aftelInterval); 
   window.speechSynthesis.cancel();
@@ -240,7 +267,6 @@ resetBtn.addEventListener("click", () => {
   isAftellen = false;
 
   openSettings.classList.remove("disabled");
-
   resetNaarBeginWaarden();
 
   startBtn.innerHTML = `<i class="fa-solid fa-play"></i> Start`;
@@ -263,13 +289,11 @@ function updateFaseTijdenVanInputs() {
   updateUI();
 }
 
-// Luisteraars voor de spinners
 snelMinInput.addEventListener("input", updateFaseTijdenVanInputs);
 snelSecInput.addEventListener("input", updateFaseTijdenVanInputs);
 traagMinInput.addEventListener("input", updateFaseTijdenVanInputs);
 traagSecInput.addEventListener("input", updateFaseTijdenVanInputs);
 
-// Luisteraar voor starttempo wissel
 selectStartTempo.addEventListener("change", (e) => {
   instellingen.startTempo = e.target.value;
   if (!timerLoopt) {
@@ -291,6 +315,5 @@ selectPiepjes.addEventListener("change", (e) => { instellingen.beeps = (e.target
 selectTrillen.addEventListener("change", (e) => { instellingen.vibrate = (e.target.value === "Aan"); });
 
 // ===== ON LOAD =====
-// Zorg dat de juiste beginfase direct ingeladen staat bij het opstarten
 resetNaarBeginWaarden();
 updateUI();
