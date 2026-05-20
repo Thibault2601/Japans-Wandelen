@@ -144,10 +144,15 @@ function laadInstellingen() {
 function spreekTekst(tekst) {
   if (!instellingen.voicePrompts) return;
   try {
-    window.speechSynthesis.cancel();
+    window.speechSynthesis.cancel(); // Stop eventuele lopende spraak direct
     const utterance = new SpeechSynthesisUtterance(tekst);
     utterance.lang = "nl-NL";
-    utterance.rate = 1.0;
+    
+    // Maximale volume en duidelijke articulatie-instellingen
+    utterance.volume = 1.0;  // 0.0 tot 1.0 (Zet de web-spraak op z'n allerluidst)
+    utterance.rate = 0.95;   // Ietsjes rustiger spraakritme voor betere verstaanbaarheid buiten
+    utterance.pitch = 1.05;  // Licht verhoogde toonhoogte snijdt beter door omgevingsgeluid heen
+
     window.speechSynthesis.speak(utterance);
   } catch (e) {
     console.log("Spraak niet ondersteund.");
@@ -459,7 +464,7 @@ function updateFaseTijdenVanInputs() {
     resetNaarBeginWaarden();
   }
   updateUI();
-  slaInstellingenOp(); // Sla op na aanpassing
+  slaInstellingenOp(); 
 }
 
 // Luisteraars voor de spinners
@@ -476,7 +481,7 @@ if (selectStartTempo) {
       resetNaarBeginWaarden();
     }
     updateUI();
-    slaInstellingenOp(); // Sla op na aanpassing
+    slaInstellingenOp(); 
   });
 }
 
@@ -487,7 +492,7 @@ if (totaleTijdInput) {
       resetNaarBeginWaarden();
     }
     updateUI();
-    slaInstellingenOp(); // Sla op na aanpassing
+    slaInstellingenOp(); 
   });
 }
 
@@ -496,6 +501,6 @@ if (selectPiepjes) selectPiepjes.addEventListener("change", (e) => { instellinge
 if (selectTrillen) selectTrillen.addEventListener("change", (e) => { instellingen.vibrate = (e.target.value === "Aan"); slaInstellingenOp(); });
 
 // ===== ON LOAD =====
-laadInstellingen(); // 1. Laad eerst de opgeslagen instellingen in
-resetNaarBeginWaarden(); // 2. Bereken de klokken op basis daarvan
-updateUI(); // 3. Toon het op het scherm
+laadInstellingen(); 
+resetNaarBeginWaarden(); 
+updateUI();
