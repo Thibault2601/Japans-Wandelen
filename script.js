@@ -310,10 +310,10 @@ function startEchteTimer() {
   speelPiep(1200);
   trilTelefoon();
   
-  // HALVE SECONDE DELAY: Wacht 500ms na de startpiep voor het eerste woord
+  // Wacht 400ms (zodat de startpiep van 300ms klaar is) en spreek dan het woord uit
   setTimeout(() => { 
     spreekTekst(isFastPhase ? "Snel" : "Traag");
-  }, 500);
+  }, 400);
 
   interval = setInterval(() => {
     resterendeSeconden--;
@@ -332,13 +332,14 @@ function startEchteTimer() {
       isFastPhase = !isFastPhase;
       phaseSeconden = isFastPhase ? instellingen.fastSeconds : instellingen.slowSeconds;
       
+      // 1. Start DIRECT de fysieke piep en trilling
       speelPiep(1200);
       trilTelefoon();
       
-      // HALVE SECONDE DELAY: Ook bij het wisselen van de sets wachten we nu 500ms na de piep
+      // 2. Wacht exact 400ms tot de piep fysiek klaar is, en spreek DAN pas
       setTimeout(() => {
         spreekTekst(isFastPhase ? "Snel" : "Traag");
-      }, 500);
+      }, 400);
     }
 
     if (resterendeSeconden <= 0) {
@@ -354,10 +355,9 @@ function startEchteTimer() {
       speelPiep(1500);
       setTimeout(() => speelPiep(1500), 400);
       
-      // HALVE SECONDE DELAY: Wacht even voor het eindsingnaal
       setTimeout(() => {
         spreekTekst("Wandeling voltooid!"); 
-      }, 500);
+      }, 400);
       
       if (sumTotalTime) sumTotalTime.textContent = instellingen.totalMinutes;
       if (sumDistance) sumDistance.textContent = (totaalAfstandMeter / 1000).toFixed(2); 
