@@ -144,18 +144,31 @@ function laadInstellingen() {
 function spreekTekst(tekst) {
   if (!instellingen.voicePrompts) return;
   try {
-    window.speechSynthesis.cancel(); // Stop eventuele lopende spraak direct
     const utterance = new SpeechSynthesisUtterance(tekst);
-    utterance.lang = "nl-NL";
     
-    // Maximale volume en duidelijke articulatie-instellingen
-    utterance.volume = 1.0;  // 0.0 tot 1.0 (Zet de web-spraak op z'n allerluidst)
-    utterance.rate = 0.95;   // Ietsjes rustiger spraakritme voor betere verstaanbaarheid buiten
-    utterance.pitch = 1.05;  // Licht verhoogde toonhoogte snijdt beter door omgevingsgeluid heen
+    // Zoek naar een beschikbare Nederlandse stem op het toestel
+    const stemmen = window.speechSynthesis.getVoices();
+    const nlStem = stemmen.find(voice => voice.lang.startsWith("nl"));
+    if (nlStem) {
+      utterance.voice = nlStem;
+    }
+    
+    utterance.lang = "nl-NL";
+    utterance.volume = 1.0; 
+    utterance.rate = 1.0;   
+    utterance.pitch = 1.0;  
 
     window.speechSynthesis.speak(utterance);
   } catch (e) {
-    console.log("Spraak niet ondersteund.");
+    console.log("Spraakfout:", e);
+  }
+}
+
+// Zorg dat mobiele browsers de stemmenlijst alvast op de achtergrond laden
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }
 }
 
@@ -297,7 +310,10 @@ function startEchteTimer() {
   speelPiep(1200);
   trilTelefoon();
   
-  setTimeout(() => { spreekTekst(isFastPhase ? "Snel" : "Traag"); }, 350);
+  // HALVE SECONDE DELAY: Wacht 500ms na de startpiep voor het eerste woord
+  setTimeout(() => { 
+    spreekTekst(isFastPhase ? "Snel" : "Traag");
+  }, 500);
 
   interval = setInterval(() => {
     resterendeSeconden--;
@@ -318,7 +334,11 @@ function startEchteTimer() {
       
       speelPiep(1200);
       trilTelefoon();
-      setTimeout(() => { spreekTekst(isFastPhase ? "Snel" : "Traag"); }, 350);
+      
+      // HALVE SECONDE DELAY: Ook bij het wisselen van de sets wachten we nu 500ms na de piep
+      setTimeout(() => {
+        spreekTekst(isFastPhase ? "Snel" : "Traag");
+      }, 500);
     }
 
     if (resterendeSeconden <= 0) {
@@ -334,16 +354,17 @@ function startEchteTimer() {
       speelPiep(1500);
       setTimeout(() => speelPiep(1500), 400);
       
-      setTimeout(() => { 
-        spreekTekst("Wandeling voltooid! Goed gedaan!"); 
-        
-        if (sumTotalTime) sumTotalTime.textContent = instellingen.totalMinutes;
-        if (sumDistance) sumDistance.textContent = (totaalAfstandMeter / 1000).toFixed(2); 
-        if (sumIntervals) sumIntervals.textContent = `${formatTime(instellingen.fastSeconds)} / ${formatTime(instellingen.slowSeconds)}`;
-        
-        if (timerRunningView) timerRunningView.style.display = "none";
-        if (summaryView) summaryView.style.display = "block";
+      // HALVE SECONDE DELAY: Wacht even voor het eindsingnaal
+      setTimeout(() => {
+        spreekTekst("Wandeling voltooid!"); 
       }, 500);
+      
+      if (sumTotalTime) sumTotalTime.textContent = instellingen.totalMinutes;
+      if (sumDistance) sumDistance.textContent = (totaalAfstandMeter / 1000).toFixed(2); 
+      if (sumIntervals) sumIntervals.textContent = `${formatTime(instellingen.fastSeconds)} / ${formatTime(instellingen.slowSeconds)}`;
+      
+      if (timerRunningView) timerRunningView.style.display = "none";
+      if (summaryView) summaryView.style.display = "block";
     }
 
     updateUI();
@@ -393,6 +414,9 @@ if (startBtn) {
       if (openSettings) openSettings.classList.add("disabled");
       if (openHistory) openHistory.classList.add("disabled"); 
 
+      // Activeer de stem-engine op het moment van klikken
+      spreekTekst(" ");
+
       let aftelTeller = 3;
       if (mainTimer) {
         mainTimer.textContent = aftelTeller;
@@ -418,7 +442,6 @@ if (startBtn) {
       isAftellen = false;
       clearInterval(interval);
       clearInterval(aftelInterval);
-      window.speechSynthesis.cancel();
       
       if (openSettings) openSettings.classList.remove("disabled");
       if (openHistory) openHistory.classList.remove("disabled"); 
@@ -433,7 +456,6 @@ if (resetBtn) {
   resetBtn.addEventListener("click", () => {
     clearInterval(interval);
     clearInterval(aftelInterval); 
-    window.speechSynthesis.cancel();
     timerLoopt = false;
     isAftellen = false;
 
