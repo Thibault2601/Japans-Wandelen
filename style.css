@@ -2,6 +2,9 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* Voorkomt dat je tekst per ongeluk selecteert tijdens het tikken op knoppen */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 body {
@@ -12,7 +15,10 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow-x: hidden;
+  overflow: hidden; /* Voorkomt dat de hele pagina kan scrollen op mobiel */
+  position: fixed;  /* Zet de body muurvast tegen 'bouncen' op iOS/Android */
+  width: 100%;
+  height: 100%;
 }
 
 /* HISTORY BUTTON (LINKSBOVEN) */
@@ -98,7 +104,7 @@ body.history-open .history-button {
   padding: 30px;
   transition: 0.4s ease;
   z-index: 999;
-  overflow-y: auto;
+  overflow-y: auto; /* Alleen de lijst zelf mag scrollen als hij vol is */
   display: flex;
   flex-direction: column;
 }
@@ -185,7 +191,7 @@ body.history-open .history-button {
   padding: 30px;
   transition: 0.4s ease;
   z-index: 999;
-  overflow-y: auto;
+  overflow-y: auto; /* Instellingen paneel mag verticaal scrollen indien nodig */
 }
 
 .settings-panel.open {
@@ -258,6 +264,7 @@ body.history-open .history-button {
   border-radius: 30px;
   padding: 30px;
   z-index: 1; 
+  touch-action: none; /* Schakelt alle sleep- en scrollbewegingen op de kaart uit */
 }
 
 .mode-title {
