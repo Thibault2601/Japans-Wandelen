@@ -8,8 +8,6 @@
   <title>Japans Wandelen</title>
 
   <link rel="stylesheet" href="style.css">
-  
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
   <link
     rel="stylesheet"
@@ -19,9 +17,25 @@
 
 <body>
 
+  <button class="history-button" id="openHistory">
+    <i class="fa-solid fa-clock-rotate-left"></i>
+  </button>
+
   <button class="settings-button" id="openSettings">
     <i class="fa-solid fa-gear"></i>
   </button>
+
+  <div class="history-panel" id="historyPanel">
+    <div class="history-header">
+      <h2>Geschiedenis</h2>
+      <button class="close-history" id="closeHistory">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="historyList" class="history-list">
+      </div>
+    <button class="clear-history-btn" id="clearHistoryBtn">Geschiedenis wissen</button>
+  </div>
 
   <div class="settings-panel" id="settingsPanel">
 
@@ -89,44 +103,78 @@
 
   <div class="timer-card">
 
-    <div class="mode-title">
-      SNEL
-    </div>
-
-    <div class="main-timer" id="mainTimer">
-      30:00
-    </div>
-
-    <div class="phase">
-      Fase: <span id="phaseTimer">03:00</span>
-    </div>
-
-    <div class="progress-bar">
-      <div class="progress-fill" id="progressFill"></div>
-    </div>
-
-    <div class="info-row">
-      <div>
-        <span class="label">Ronde:</span>
-        <span id="setInfo">1 / 5</span>
+    <div id="timerRunningView">
+      <div class="mode-title">
+        SNEL
       </div>
-      <div>
-        <span class="label">Verstreken:</span>
-        <span id="elapsedInfo">00:00</span>
+
+      <div class="main-timer" id="mainTimer">
+        30:00
       </div>
-      <div>
-        <span class="label">Resterend:</span>
-        <span id="remainingInfo">30:00</span>
+
+      <div class="phase">
+        Fase: <span id="phaseTimer">03:00</span>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+
+      <div class="info-row">
+        <div>
+          <span class="label">Ronde:</span>
+          <span id="setInfo">1 / 5</span>
+        </div>
+        <div>
+          <span class="label">Afstand:</span>
+          <span id="distanceInfo">0.00 km</span>
+        </div>
+        <div>
+          <span class="label">Resterend:</span>
+          <span id="remainingInfo">30:00</span>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="start-btn" id="startBtn">
+          <i class="fa-solid fa-play"></i> Start
+        </button>
+        <button class="reset-btn" id="resetBtn">
+          <i class="fa-solid fa-rotate-left"></i> Opnieuw
+        </button>
       </div>
     </div>
 
-    <div class="buttons">
-      <button class="start-btn" id="startBtn">
-        <i class="fa-solid fa-play"></i> Start
-      </button>
-      <button class="reset-btn" id="resetBtn">
-        <i class="fa-solid fa-rotate-left"></i> Opnieuw
-      </button>
+    <div id="summaryView" class="summary-view" style="display: none;">
+      <div class="summary-icon">
+        <i class="fa-solid fa-square-check"></i>
+      </div>
+      <h2 class="summary-title">Goed gedaan!</h2>
+      <p class="summary-subtitle">Je hebt je Japanse wandeling voltooid.</p>
+
+      <div class="summary-stats">
+        <div class="stat-box">
+          <span class="stat-val" id="sumTotalTime">30</span>
+          <span class="stat-lbl">minuten</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-val" id="sumDistance">0.00</span>
+          <span class="stat-lbl">kilometer</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-val" id="sumIntervals">3:00</span>
+          <span class="stat-lbl">snel / traag</span>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="save-btn" id="saveWalkBtn">
+          <i class="fa-solid fa-bookmark"></i> Opslaan
+        </button>
+        <button class="close-btn" id="closeWalkBtn">
+          Sluiten
+        </button>
+      </div>
     </div>
 
   </div>
