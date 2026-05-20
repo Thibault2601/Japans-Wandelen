@@ -15,7 +15,34 @@ body {
   overflow-x: hidden;
 }
 
-/* SETTINGS BUTTON */
+/* HISTORY BUTTON (LINKSBOVEN) */
+.history-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  border: none;
+  background: #151515;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: 0.3s ease;
+}
+
+.history-button:hover {
+  transform: scale(1.1);
+}
+
+.history-button.disabled {
+  opacity: 0.15;         
+  cursor: not-allowed;   
+  pointer-events: none;  
+}
+
+/* SETTINGS BUTTON (RECHTSBOVEN) */
 .settings-button {
   position: fixed;
   top: 20px;
@@ -29,7 +56,7 @@ body {
   font-size: 22px;
   cursor: pointer;
   z-index: 1000;
-  transition: 0.2s;
+  transition: 0.3s ease;
 }
 
 .settings-button:hover {
@@ -46,23 +73,123 @@ body {
   transform: none;
 }
 
+/* VERBERG DE KNOPPEN ALS HUN PANELEN OPEN STAAN */
+body.settings-open .settings-button {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0);
+}
+
+body.history-open .history-button {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0);
+}
+
+/* HISTORY PANEL (SCHUIFT VAN LINKS) */
+.history-panel {
+  position: fixed;
+  top: 0;
+  left: -400px; 
+  width: 350px;
+  height: 100vh;
+  background: #0b0b0b;
+  border-right: 1px solid #222;
+  padding: 30px;
+  transition: 0.4s ease;
+  z-index: 999;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-panel.open {
+  left: 0; 
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.close-history {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.history-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+.history-item {
+  background: #111;
+  border: 1px solid #222;
+  padding: 15px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.history-item .date {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 5px;
+}
+
+.history-item .duration {
+  font-size: 17px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 5px;
+}
+
+.history-item .details {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.clear-history-btn {
+  background: #222;
+  color: #ff4444;
+  border: 1px solid #333;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.clear-history-btn:hover {
+  background: #ff4444;
+  color: white;
+}
+
 /* SETTINGS PANEL */
 .settings-panel {
   position: fixed;
   top: 0;
-  right: -400px;
+  right: -400px; 
   width: 350px;
   height: 100vh;
   background: #0b0b0b;
   border-left: 1px solid #222;
   padding: 30px;
-  transition: 0.4s;
+  transition: 0.4s ease;
   z-index: 999;
   overflow-y: auto;
 }
 
 .settings-panel.open {
-  right: 0;
+  right: 0; 
 }
 
 .settings-header {
@@ -85,6 +212,7 @@ body {
   flex-direction: column;
   gap: 10px;
   margin-bottom: 25px;
+  text-align: left;
 }
 
 .setting label {
@@ -102,7 +230,6 @@ body {
   font-size: 16px;
 }
 
-/* De groep voor de spinners met pijltjes */
 .time-spinner-group {
   display: flex;
   align-items: center;
@@ -113,7 +240,6 @@ body {
   flex: 1;
   width: 70px;
   text-align: center;
-  /* FIX: Beide eigenschappen ingevuld om de waarschuwing op te lossen! */
   -moz-appearance: number-input;
   appearance: number-input;
 }
@@ -131,6 +257,7 @@ body {
   border: 1px solid #1f1f1f;
   border-radius: 30px;
   padding: 30px;
+  z-index: 1; 
 }
 
 .mode-title {
@@ -178,17 +305,89 @@ body {
   margin-bottom: 40px;
 }
 
+.info-row div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
 .label {
   color: #888;
 }
 
+/* SUMMARY VIEW */
+.summary-view {
+  text-align: center;
+  padding: 10px 0;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.summary-icon {
+  font-size: 60px;
+  color: #00ff66;
+  margin-bottom: 15px;
+}
+
+.summary-title {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.summary-subtitle {
+  color: #888;
+  font-size: 15px;
+  margin-bottom: 35px;
+}
+
+.summary-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 40px;
+}
+
+.stat-box {
+  flex: 1;
+  background: #111;
+  border: 1px solid #1f1f1f;
+  padding: 12px 6px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-val {
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.stat-lbl {
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* BUTTONS */
 .buttons {
   display: flex;
   gap: 15px;
 }
 
 .start-btn,
-.reset-btn {
+.reset-btn,
+.save-btn,
+.close-btn {
   flex: 1;
   padding: 20px;
   border-radius: 18px;
@@ -198,18 +397,26 @@ body {
   transition: 0.2s;
 }
 
-.start-btn {
+.start-btn, .save-btn {
   background: white;
+  color: black;
+  font-weight: bold;
+}
+
+.save-btn {
+  background: #00ff66;
   color: black;
 }
 
-.reset-btn {
+.reset-btn, .close-btn {
   background: transparent;
   border: 1px solid #333;
   color: white;
 }
 
 .start-btn:hover,
-.reset-btn:hover {
+.reset-btn:hover,
+.save-btn:hover,
+.close-btn:hover {
   transform: scale(1.03);
 }
