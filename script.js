@@ -41,6 +41,7 @@ const progressFill = document.getElementById("progressFill");
 const startBtn = document.getElementById("startBtn");
 const resetBtn = document.getElementById("resetBtn");
 const modeTitle = document.querySelector(".mode-title");
+const wakeLockAudio = document.getElementById("wakeLockAudio"); // Achtergrond audio speler
 
 // Schermen wisselen elementen (Summary / Voltooid)
 const timerRunningView = document.getElementById("timerRunningView");
@@ -365,6 +366,11 @@ function startEchteTimer() {
         resterendeSeconden = 0;
         phaseSeconden = 0;
         
+        // Schakel achtergrondaudio uit, de wandeling is klaar
+        if (wakeLockAudio) {
+          wakeLockAudio.pause();
+        }
+
         if (openSettings) openSettings.classList.remove("disabled");
         if (openHistory) openHistory.classList.remove("disabled"); 
         if (startBtn) startBtn.innerHTML = `<i class="fa-solid fa-play"></i> Start`;
@@ -432,6 +438,11 @@ if (startBtn) {
       if (openSettings) openSettings.classList.add("disabled");
       if (openHistory) openHistory.classList.add("disabled"); 
 
+      // Activeer de stille audio-loop om afsluiten op de achtergrond te blokkeren
+      if (wakeLockAudio) {
+        wakeLockAudio.play().catch(e => console.log("Achtergrond audio lock kon niet starten:", e));
+      }
+
       // Activeer de stem-engine / audio context direct bij de user-click
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -464,6 +475,11 @@ if (startBtn) {
       clearInterval(interval);
       clearInterval(aftelInterval);
       
+      // Pauzeer de stille achtergrondaudio
+      if (wakeLockAudio) {
+        wakeLockAudio.pause();
+      }
+
       if (openSettings) openSettings.classList.remove("disabled");
       if (openHistory) openHistory.classList.remove("disabled"); 
       startBtn.innerHTML = `<i class="fa-solid fa-play"></i> Start`;
@@ -479,6 +495,12 @@ if (resetBtn) {
     clearInterval(aftelInterval); 
     timerLoopt = false;
     isAftellen = false;
+
+    // Zet de stille achtergrondaudio volledig stil
+    if (wakeLockAudio) {
+      wakeLockAudio.pause();
+      wakeLockAudio.currentTime = 0;
+    }
 
     if (openSettings) openSettings.classList.remove("disabled");
     if (openHistory) openHistory.classList.remove("disabled"); 
@@ -542,6 +564,13 @@ if (totaleTijdInput) {
 if (selectSpraak) selectSpraak.addEventListener("change", (e) => { instellingen.voicePrompts = (e.target.value === "Aan"); slaInstellingenOp(); });
 if (selectPiepjes) selectPiepjes.addEventListener("change", (e) => { instellingen.beeps = (e.target.value === "Aan"); slaInstellingenOp(); });
 if (selectTrillen) selectTrillen.addEventListener("change", (e) => { instellingen.vibrate = (e.target.value === "Aan"); slaInstellingenOp(); });
+
+// ===== EXTRA VANGNET: SCHERM-WISSEL SYNCHRONISATIE =====
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && timerLoopt) {
+    updateUI(); // Forceert direct een frisse UI update zodra het scherm uit de broekzak komt
+  }
+});
 
 // ===== ON LOAD =====
 laadInstellingen(); 
