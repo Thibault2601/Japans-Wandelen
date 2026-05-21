@@ -2,7 +2,6 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  /* Voorkomt dat je tekst per ongeluk selecteert tijdens het tikken op knoppen */
   -webkit-user-select: none;
   user-select: none;
 }
@@ -17,12 +16,9 @@ body {
   align-items: center;
   width: 100%;
   height: 100%;
-  
-  /* Voorkomt dat de hele pagina 'bouncet' op mobiel, zonder scrollen in panelen te slopen */
   overscroll-behavior: none; 
 }
 
-/* HISTORY BUTTON (LINKSBOVEN) */
 .history-button {
   position: fixed;
   top: 20px;
@@ -49,7 +45,6 @@ body {
   pointer-events: none;  
 }
 
-/* SETTINGS BUTTON (RECHTSBOVEN) */
 .settings-button {
   position: fixed;
   top: 20px;
@@ -80,7 +75,6 @@ body {
   transform: none;
 }
 
-/* VERBERG DE KNOPPEN ALS HUN PANELEN OPEN STAAN */
 body.settings-open .settings-button {
   opacity: 0;
   pointer-events: none;
@@ -93,7 +87,6 @@ body.history-open .history-button {
   transform: scale(0);
 }
 
-/* HISTORY PANEL (SCHUIFT VAN LINKS) */
 .history-panel {
   position: fixed;
   top: 0;
@@ -108,7 +101,7 @@ body.history-open .history-button {
   overflow-y: auto; 
   display: flex;
   flex-direction: column;
-  -webkit-overflow-scrolling: touch; /* Vloeiend scrollen op iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 .history-panel.open {
@@ -181,7 +174,6 @@ body.history-open .history-button {
   color: white;
 }
 
-/* SETTINGS PANEL */
 .settings-panel {
   position: fixed;
   top: 0;
@@ -194,7 +186,7 @@ body.history-open .history-button {
   transition: 0.4s ease;
   z-index: 999;
   overflow-y: auto; 
-  -webkit-overflow-scrolling: touch; /* Vloeiend scrollen op iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 .settings-panel.open {
@@ -259,7 +251,6 @@ body.history-open .history-button {
   padding-right: 5px;
 }
 
-/* TIMER CARD */
 .timer-card {
   width: 430px;
   background: #0b0b0b;
@@ -267,7 +258,7 @@ body.history-open .history-button {
   border-radius: 30px;
   padding: 30px;
   z-index: 1; 
-  touch-action: none; /* Schakelt alle sleep- en scrollbewegingen op de kaart uit */
+  touch-action: none;
 }
 
 .mode-title {
@@ -327,7 +318,6 @@ body.history-open .history-button {
   color: #888;
 }
 
-/* SUMMARY VIEW */
 .summary-view {
   text-align: center;
   padding: 10px 0;
@@ -388,7 +378,6 @@ body.history-open .history-button {
   letter-spacing: 0.5px;
 }
 
-/* BUTTONS */
 .buttons {
   display: flex;
   gap: 15px;
