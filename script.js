@@ -27,6 +27,9 @@ let isAftellen = false;
 let interval;
 let aftelInterval; 
 
+// Globale audio context om mobiele crash te voorkomen
+let audioCtx = null;
+
 // ===== UI ELEMENTEN =====
 const mainTimer = document.getElementById("mainTimer");
 const phaseTimer = document.getElementById("phaseTimer");
@@ -193,7 +196,13 @@ function resetNaarBeginWaarden() {
 function speelPiep(frequentie = 880) {
   if (!instellingen.beeps) return;
   try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     oscillator.connect(gainNode);
@@ -202,9 +211,9 @@ function speelPiep(frequentie = 880) {
     oscillator.frequency.setValueAtTime(frequentie, audioCtx.currentTime); 
     gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
     oscillator.start();
-    setTimeout(() => { oscillator.stop(); audioCtx.close(); }, 300);
+    oscillator.stop(audioCtx.currentTime + 0.3);
   } catch (e) {
-    console.log("Audio niet ondersteund.");
+    console.log("Audio niet ondersteund of geblokkeerd.");
   }
 }
 
@@ -310,65 +319,74 @@ function startEchteTimer() {
   speelPiep(1200);
   trilTelefoon();
   
-  // Wacht 400ms (zodat de startpiep van 300ms klaar is) en spreek dan het woord uit
   setTimeout(() => { 
     spreekTekst(isFastPhase ? "Snel" : "Traag");
-  }, 400);
+  }, 500);
+
+  // Sla het exacte startmoment op
+  let laatsteCheck = Date.now();
 
   interval = setInterval(() => {
-    resterendeSeconden--;
-    verstrekenSeconden++;
-    phaseSeconden--;
+    let nu = Date.now();
+    let verstrekenMs = nu - laatsteCheck;
+    
+    // Controleer of er echt een seconde (of meer) voorbij is gegaan
+    if (verstrekenMs >= 1000) {
+      let aantalSecondenVoorbij = Math.floor(verstrekenMs / 1000);
+      laatsteCheck += aantalSecondenVoorbij * 1000;
 
-    // AFSTAND BEREKENEN PER SECONDE
-    if (isFastPhase) {
-      totaalAfstandMeter += (instellingen.speedFastKmH * 1000) / 3600;
-    } else {
-      totaalAfstandMeter += (instellingen.speedSlowKmH * 1000) / 3600;
+      resterendeSeconden -= aantalSecondenVoorbij;
+      verstrekenSeconden += aantalSecondenVoorbij;
+      phaseSeconden -= aantalSecondenVoorbij;
+
+      // AFSTAND BEREKENEN PER SECONDE
+      if (isFastPhase) {
+        totaalAfstandMeter += ((instellingen.speedFastKmH * 1000) / 3600) * aantalSecondenVoorbij;
+      } else {
+        totaalAfstandMeter += ((instellingen.speedSlowKmH * 1000) / 3600) * aantalSecondenVoorbij;
+      }
+
+      if (phaseSeconden <= 0 && resterendeSeconden > 0) {
+        huidigeSet++;
+        isFastPhase = !isFastPhase;
+        phaseSeconden = (isFastPhase ? instellingen.fastSeconds : instellingen.slowSeconds) + phaseSeconden;
+        
+        speelPiep(1200);
+        trilTelefoon();
+        
+        setTimeout(() => {
+          spreekTekst(isFastPhase ? "Snel" : "Traag");
+        }, 500);
+      }
+
+      if (resterendeSeconden <= 0) {
+        clearInterval(interval);
+        timerLoopt = false;
+        resterendeSeconden = 0;
+        phaseSeconden = 0;
+        
+        if (openSettings) openSettings.classList.remove("disabled");
+        if (openHistory) openHistory.classList.remove("disabled"); 
+        if (startBtn) startBtn.innerHTML = `<i class="fa-solid fa-play"></i> Start`;
+        
+        speelPiep(1500);
+        setTimeout(() => speelPiep(1500), 400);
+        
+        setTimeout(() => {
+          spreekTekst("Wandeling voltooid!"); 
+        }, 500);
+        
+        if (sumTotalTime) sumTotalTime.textContent = instellingen.totalMinutes;
+        if (sumDistance) sumDistance.textContent = (totaalAfstandMeter / 1000).toFixed(2); 
+        if (sumIntervals) sumIntervals.textContent = `${formatTime(instellingen.fastSeconds)} / ${formatTime(instellingen.slowSeconds)}`;
+        
+        if (timerRunningView) timerRunningView.style.display = "none";
+        if (summaryView) summaryView.style.display = "block";
+      }
+
+      updateUI();
     }
-
-    if (phaseSeconden <= 0 && resterendeSeconden > 0) {
-      huidigeSet++;
-      isFastPhase = !isFastPhase;
-      phaseSeconden = isFastPhase ? instellingen.fastSeconds : instellingen.slowSeconds;
-      
-      // 1. Start DIRECT de fysieke piep en trilling
-      speelPiep(1200);
-      trilTelefoon();
-      
-      // 2. Wacht exact 400ms tot de piep fysiek klaar is, en spreek DAN pas
-      setTimeout(() => {
-        spreekTekst(isFastPhase ? "Snel" : "Traag");
-      }, 400);
-    }
-
-    if (resterendeSeconden <= 0) {
-      clearInterval(interval);
-      timerLoopt = false;
-      resterendeSeconden = 0;
-      phaseSeconden = 0;
-      
-      if (openSettings) openSettings.classList.remove("disabled");
-      if (openHistory) openHistory.classList.remove("disabled"); 
-      if (startBtn) startBtn.innerHTML = `<i class="fa-solid fa-play"></i> Start`;
-      
-      speelPiep(1500);
-      setTimeout(() => speelPiep(1500), 400);
-      
-      setTimeout(() => {
-        spreekTekst("Wandeling voltooid!"); 
-      }, 400);
-      
-      if (sumTotalTime) sumTotalTime.textContent = instellingen.totalMinutes;
-      if (sumDistance) sumDistance.textContent = (totaalAfstandMeter / 1000).toFixed(2); 
-      if (sumIntervals) sumIntervals.textContent = `${formatTime(instellingen.fastSeconds)} / ${formatTime(instellingen.slowSeconds)}`;
-      
-      if (timerRunningView) timerRunningView.style.display = "none";
-      if (summaryView) summaryView.style.display = "block";
-    }
-
-    updateUI();
-  }, 1000);
+  }, 200); // Check 5 keer per seconde om gaten direct dicht te timeren
 }
 
 // Knoppen op het overzichtsscherm afhandelen
@@ -414,7 +432,10 @@ if (startBtn) {
       if (openSettings) openSettings.classList.add("disabled");
       if (openHistory) openHistory.classList.add("disabled"); 
 
-      // Activeer de stem-engine op het moment van klikken
+      // Activeer de stem-engine / audio context direct bij de user-click
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
       spreekTekst(" ");
 
       let aftelTeller = 3;
