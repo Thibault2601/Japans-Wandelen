@@ -1,5 +1,4 @@
 // ===== INSTELLINGEN =====
-// Standaardwaarden als er nog niets is opgeslagen
 let instellingen = {
   fastSeconds: 180, 
   slowSeconds: 180, 
@@ -30,6 +29,9 @@ let aftelInterval;
 // Globale audio context om mobiele crash te voorkomen
 let audioCtx = null;
 
+// 💥 NIEUW: Wake Lock variabele om het scherm aan te houden
+let wakeLock = null;
+
 // ===== UI ELEMENTEN =====
 const mainTimer = document.getElementById("mainTimer");
 const phaseTimer = document.getElementById("phaseTimer");
@@ -41,9 +43,9 @@ const progressFill = document.getElementById("progressFill");
 const startBtn = document.getElementById("startBtn");
 const resetBtn = document.getElementById("resetBtn");
 const modeTitle = document.querySelector(".mode-title");
-const wakeLockAudio = document.getElementById("wakeLockAudio"); // Achtergrond audio speler
+const wakeLockAudio = document.getElementById("wakeLockAudio");
 
-// Schermen wisselen elementen (Summary / Voltooid)
+// Schermen wisselen elementen
 const timerRunningView = document.getElementById("timerRunningView");
 const summaryView = document.getElementById("summaryView");
 const sumTotalTime = document.getElementById("sumTotalTime");
@@ -56,13 +58,11 @@ const closeWalkBtn = document.getElementById("closeWalkBtn");
 const settingsPanel = document.getElementById("settingsPanel");
 const openSettings = document.getElementById("openSettings");
 const closeSettings = document.getElementById("closeSettings");
-
 const selectStartTempo = document.getElementById("startTempo");
 const selectSpraak = document.getElementById("gesprokenMeldingen");
 const selectPiepjes = document.getElementById("piepjes");
 const selectTrillen = document.getElementById("trillen");
 
-// Spinner input elementen
 const snelMinInput = document.getElementById("snelMinuten");
 const snelSecInput = document.getElementById("snelSeconden");
 const traagMinInput = document.getElementById("traagMinuten");
@@ -76,7 +76,31 @@ const closeHistory = document.getElementById("closeHistory");
 const historyList = document.getElementById("historyList");
 const clearHistoryBtn = document.getElementById("clearHistoryBtn");
 
-// Schakel het instellingenpaneel (open/dicht) via tandwieltje
+// ===== WAKE LOCK LOGICA (SCHERM ALTIJD AANHOUDEN) =====
+async function activeerWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Screen Wake Lock is actief! Scherm blijft aan.');
+    } catch (err) {
+      console.log(`Wake Lock fout: ${err.name}, ${err.message}`);
+    }
+  } else {
+    console.log('Wake Lock API wordt niet ondersteund door deze browser.');
+  }
+}
+
+function deactiveerWakeLock() {
+  if (wakeLock !== null) {
+    wakeLock.release()
+      .then(() => {
+        wakeLock = null;
+        console.log('Screen Wake Lock is vrijgegeven. Scherm kan weer uit.');
+      });
+  }
+}
+
+// ===== PANEL CONTROLS =====
 if (openSettings) {
   openSettings.addEventListener("click", () => {
     if (!timerLoopt) {
@@ -95,7 +119,6 @@ if (closeSettings) {
   });
 }
 
-// Schakel het geschiedenispaneel open/dicht via de klok-knop
 if (openHistory) {
   openHistory.addEventListener("click", () => {
     if (!timerLoopt) {
@@ -115,7 +138,7 @@ if (closeHistory) {
   });
 }
 
-// ===== INSTELLINGSBEHEER (GEHEUGEN) =====
+// ===== INSTELLINGSBEHEER =====
 function slaInstellingenOp() {
   localStorage.setItem("wandelInstellingen", JSON.stringify(instellingen));
 }
@@ -125,15 +148,11 @@ function laadInstellingen() {
   if (opgeslagen) {
     try {
       instellingen = JSON.parse(opgeslagen);
-      
-      // Zet de HTML elementen (inputs/selects) direct op de opgeslagen waarden
       if (selectStartTempo) selectStartTempo.value = instellingen.startTempo;
       if (totaleTijdInput) totaleTijdInput.value = instellingen.totalMinutes;
-      
       if (selectSpraak) selectSpraak.value = instellingen.voicePrompts ? "Aan" : "Uit";
       if (selectPiepjes) selectPiepjes.value = instellingen.beeps ? "Aan" : "Uit";
       if (selectTrillen) selectTrillen.value = instellingen.vibrate ? "Aan" : "Uit";
-      
       if (snelMinInput) snelMinInput.value = Math.floor(instellingen.fastSeconds / 60);
       if (snelSecInput) snelSecInput.value = instellingen.fastSeconds % 60;
       if (traagMinInput) traagMinInput.value = Math.floor(instellingen.slowSeconds / 60);
@@ -144,31 +163,24 @@ function laadInstellingen() {
   }
 }
 
-// ===== STEM, GELUID & TRILLEN FUNCTIES =====
+// ===== STEM, GELUID & TRILLEN =====
 function spreekTekst(tekst) {
   if (!instellingen.voicePrompts) return;
   try {
     const utterance = new SpeechSynthesisUtterance(tekst);
-    
-    // Zoek naar een beschikbare Nederlandse stem op het toestel
     const stemmen = window.speechSynthesis.getVoices();
     const nlStem = stemmen.find(voice => voice.lang.startsWith("nl"));
-    if (nlStem) {
-      utterance.voice = nlStem;
-    }
-    
+    if (nlStem) utterance.voice = nlStem;
     utterance.lang = "nl-NL";
     utterance.volume = 1.0; 
     utterance.rate = 1.0;   
     utterance.pitch = 1.0;  
-
     window.speechSynthesis.speak(utterance);
   } catch (e) {
     console.log("Spraakfout:", e);
   }
 }
 
-// Zorg dat mobiele browsers de stemmenlijst alvast op de achtergrond laden
 if (typeof window !== "undefined" && window.speechSynthesis) {
   window.speechSynthesis.getVoices();
   if (window.speechSynthesis.onvoiceschanged !== undefined) {
@@ -176,18 +188,14 @@ if (typeof window !== "undefined" && window.speechSynthesis) {
   }
 }
 
-// Functie om de timer te resetten naar de beginwaarden op basis van instellingen
 function resetNaarBeginWaarden() {
   totaalSeconden = instellingen.totalMinutes * 60;
   resterendeSeconden = totaalSeconden;
   verstrekenSeconden = 0;
   huidigeSet = 1;
   totaalAfstandMeter = 0; 
-  
-  // Bepaal de startfase op basis van de instelling
   isFastPhase = (instellingen.startTempo === "snel");
   phaseSeconden = isFastPhase ? instellingen.fastSeconds : instellingen.slowSeconds;
-  
   totaalSets = Math.ceil(totaalSeconden / (instellingen.fastSeconds + instellingen.slowSeconds)) * 2;
 
   if (summaryView) summaryView.style.display = "none";
@@ -203,7 +211,6 @@ function speelPiep(frequentie = 880) {
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
-
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     oscillator.connect(gainNode);
@@ -214,18 +221,15 @@ function speelPiep(frequentie = 880) {
     oscillator.start();
     oscillator.stop(audioCtx.currentTime + 0.3);
   } catch (e) {
-    console.log("Audio niet ondersteund of geblokkeerd.");
+    console.log("Audio geblokkeerd.");
   }
 }
 
 function trilTelefoon() {
   if (!instellingen.vibrate) return;
-  if ("vibrate" in navigator) {
-    navigator.vibrate(500);
-  }
+  if ("vibrate" in navigator) navigator.vibrate(500);
 }
 
-// ===== TIJD & AFSTAND FORMATTEREN =====
 function formatTime(seconds) {
   let mins = Math.floor(seconds / 60);
   let secs = seconds % 60;
@@ -233,17 +237,14 @@ function formatTime(seconds) {
 }
 
 function formatKilometers(meters) {
-  let km = meters / 1000;
-  return km.toFixed(2) + " km";
+  return (meters / 1000).toFixed(2) + " km";
 }
 
-// ===== UPDATE UI =====
 function updateUI() {
   if (!isAftellen && mainTimer) {
     mainTimer.textContent = formatTime(resterendeSeconden);
     mainTimer.style.color = "white";
   }
-
   if (phaseTimer) phaseTimer.textContent = formatTime(phaseSeconden);
   if (elapsedInfo) elapsedInfo.textContent = formatTime(verstrekenSeconden);
   if (remainingInfo) remainingInfo.textContent = formatTime(resterendeSeconden);
@@ -259,15 +260,13 @@ function updateUI() {
       modeTitle.style.color = "#ffcc00";
     }
   }
-
   let progress = (verstrekenSeconden / totaalSeconden) * 100;
   if (progressFill) progressFill.style.width = `${Math.min(progress, 100)}%`;
 }
 
-// ===== GESCHIEDENIS LOGICA =====
+// ===== GESCHIEDENIS =====
 function slaWandelingOp() {
   let geschiedenis = JSON.parse(localStorage.getItem("wandelGeschiedenis")) || [];
-  
   let nieuweWandeling = {
     datum: new Date().toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }),
     totaleTijd: instellingen.totalMinutes,
@@ -275,7 +274,6 @@ function slaWandelingOp() {
     snelTijd: formatTime(instellingen.fastSeconds),
     traagTijd: formatTime(instellingen.slowSeconds)
   };
-  
   geschiedenis.unshift(nieuweWandeling); 
   localStorage.setItem("wandelGeschiedenis", JSON.stringify(geschiedenis));
 }
@@ -284,12 +282,10 @@ function toonGeschiedenis() {
   if (!historyList) return;
   let geschiedenis = JSON.parse(localStorage.getItem("wandelGeschiedenis")) || [];
   historyList.innerHTML = "";
-  
   if (geschiedenis.length === 0) {
-    historyList.innerHTML = "<p style='color: #666; text-align: center; margin-top: 20px;'>Nog geen wandelingen opgeslagen.</p>";
+    historyList.innerHTML = "<p style='color: #666; text-align: center; margin-top: 20px;'>Nog geen wandelingen.</p>";
     return;
   }
-  
   geschiedenis.forEach(w => {
     let item = document.createElement("div");
     item.classList.add("history-item");
@@ -312,26 +308,21 @@ if (clearHistoryBtn) {
   });
 }
 
-// ===== RUN CORE TIMER =====
+// ===== TIMING LOGICA =====
 function startEchteTimer() {
   isAftellen = false;
   updateUI();
-  
   speelPiep(1200);
   trilTelefoon();
   
-  setTimeout(() => { 
-    spreekTekst(isFastPhase ? "Snel" : "Traag");
-  }, 500);
+  setTimeout(() => { spreekTekst(isFastPhase ? "Snel" : "Traag"); }, 500);
 
-  // Sla het exacte startmoment op
   let laatsteCheck = Date.now();
 
   interval = setInterval(() => {
     let nu = Date.now();
     let verstrekenMs = nu - laatsteCheck;
     
-    // Controleer of er echt een seconde (of meer) voorbij is gegaan
     if (verstrekenMs >= 1000) {
       let aantalSecondenVoorbij = Math.floor(verstrekenMs / 1000);
       laatsteCheck += aantalSecondenVoorbij * 1000;
@@ -340,7 +331,6 @@ function startEchteTimer() {
       verstrekenSeconden += aantalSecondenVoorbij;
       phaseSeconden -= aantalSecondenVoorbij;
 
-      // AFSTAND BEREKENEN PER SECONDE
       if (isFastPhase) {
         totaalAfstandMeter += ((instellingen.speedFastKmH * 1000) / 3600) * aantalSecondenVoorbij;
       } else {
@@ -354,10 +344,7 @@ function startEchteTimer() {
         
         speelPiep(1200);
         trilTelefoon();
-        
-        setTimeout(() => {
-          spreekTekst(isFastPhase ? "Snel" : "Traag");
-        }, 500);
+        setTimeout(() => { spreekTekst(isFastPhase ? "Snel" : "Traag"); }, 500);
       }
 
       if (resterendeSeconden <= 0) {
@@ -366,10 +353,9 @@ function startEchteTimer() {
         resterendeSeconden = 0;
         phaseSeconden = 0;
         
-        // Schakel achtergrondaudio uit, de wandeling is klaar
-        if (wakeLockAudio) {
-          wakeLockAudio.pause();
-        }
+        // 💥 Scherm mag weer normaal in slaapstand vallen
+        deactiveerWakeLock();
+        if (wakeLockAudio) wakeLockAudio.pause();
 
         if (openSettings) openSettings.classList.remove("disabled");
         if (openHistory) openHistory.classList.remove("disabled"); 
@@ -377,10 +363,7 @@ function startEchteTimer() {
         
         speelPiep(1500);
         setTimeout(() => speelPiep(1500), 400);
-        
-        setTimeout(() => {
-          spreekTekst("Wandeling voltooid!"); 
-        }, 500);
+        setTimeout(() => { spreekTekst("Wandeling voltooid!"); }, 500);
         
         if (sumTotalTime) sumTotalTime.textContent = instellingen.totalMinutes;
         if (sumDistance) sumDistance.textContent = (totaalAfstandMeter / 1000).toFixed(2); 
@@ -389,13 +372,11 @@ function startEchteTimer() {
         if (timerRunningView) timerRunningView.style.display = "none";
         if (summaryView) summaryView.style.display = "block";
       }
-
       updateUI();
     }
-  }, 200); // Check 5 keer per seconde om gaten direct dicht te timeren
+  }, 200);
 }
 
-// Knoppen op het overzichtsscherm afhandelen
 if (saveWalkBtn) {
   saveWalkBtn.addEventListener("click", () => {
     slaWandelingOp();
@@ -438,12 +419,12 @@ if (startBtn) {
       if (openSettings) openSettings.classList.add("disabled");
       if (openHistory) openHistory.classList.add("disabled"); 
 
-      // Activeer de stille audio-loop om afsluiten op de achtergrond te blokkeren
+      // 💥 Activeer de Screen Wake Lock & Audio Lock direct bij de klik
+      activeerWakeLock();
       if (wakeLockAudio) {
-        wakeLockAudio.play().catch(e => console.log("Achtergrond audio lock kon niet starten:", e));
+        wakeLockAudio.play().catch(e => console.log("Audio context trigger."));
       }
 
-      // Activeer de stem-engine / audio context direct bij de user-click
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
@@ -475,10 +456,9 @@ if (startBtn) {
       clearInterval(interval);
       clearInterval(aftelInterval);
       
-      // Pauzeer de stille achtergrondaudio
-      if (wakeLockAudio) {
-        wakeLockAudio.pause();
-      }
+      // 💥 Geef scherm weer vrij als de gebruiker zelf op pauze klikt
+      deactiveerWakeLock();
+      if (wakeLockAudio) wakeLockAudio.pause();
 
       if (openSettings) openSettings.classList.remove("disabled");
       if (openHistory) openHistory.classList.remove("disabled"); 
@@ -496,7 +476,8 @@ if (resetBtn) {
     timerLoopt = false;
     isAftellen = false;
 
-    // Zet de stille achtergrondaudio volledig stil
+    // 💥 Geef scherm weer vrij bij harde reset
+    deactiveerWakeLock();
     if (wakeLockAudio) {
       wakeLockAudio.pause();
       wakeLockAudio.currentTime = 0;
@@ -508,13 +489,12 @@ if (resetBtn) {
     document.body.classList.remove("history-open");
 
     resetNaarBeginWaarden();
-
     if (startBtn) startBtn.innerHTML = `<i class="fa-solid fa-play"></i> Start`;
     updateUI();
   });
 }
 
-// ===== HERBEREKENEN VAN SPINNER INPUTS =====
+// ===== INPUT AFHANDELING =====
 function updateFaseTijdenVanInputs() {
   let snelMin = 0, snelSec = 0, traagMin = 0, traagSec = 0;
   if (snelMinInput) snelMin = Math.max(0, Number(snelMinInput.value) || 0);
@@ -525,26 +505,20 @@ function updateFaseTijdenVanInputs() {
   instellingen.fastSeconds = (snelMin * 60) + snelSec;
   instellingen.slowSeconds = (traagMin * 60) + traagSec;
   
-  if (!timerLoopt) {
-    resetNaarBeginWaarden();
-  }
+  if (!timerLoopt) resetNaarBeginWaarden();
   updateUI();
   slaInstellingenOp(); 
 }
 
-// Luisteraars voor de spinners
 if (snelMinInput) snelMinInput.addEventListener("input", updateFaseTijdenVanInputs);
 if (snelSecInput) snelSecInput.addEventListener("input", updateFaseTijdenVanInputs);
 if (traagMinInput) traagMinInput.addEventListener("input", updateFaseTijdenVanInputs);
 if (traagSecInput) traagSecInput.addEventListener("input", updateFaseTijdenVanInputs);
 
-// Luisteraar voor starttempo wissel
 if (selectStartTempo) {
   selectStartTempo.addEventListener("change", (e) => {
     instellingen.startTempo = e.target.value;
-    if (!timerLoopt) {
-      resetNaarBeginWaarden();
-    }
+    if (!timerLoopt) resetNaarBeginWaarden();
     updateUI();
     slaInstellingenOp(); 
   });
@@ -553,9 +527,7 @@ if (selectStartTempo) {
 if (totaleTijdInput) {
   totaleTijdInput.addEventListener("input", (e) => {
     instellingen.totalMinutes = Number(e.target.value) || 0;
-    if (!timerLoopt) {
-      resetNaarBeginWaarden();
-    }
+    if (!timerLoopt) resetNaarBeginWaarden();
     updateUI();
     slaInstellingenOp(); 
   });
@@ -565,10 +537,13 @@ if (selectSpraak) selectSpraak.addEventListener("change", (e) => { instellingen.
 if (selectPiepjes) selectPiepjes.addEventListener("change", (e) => { instellingen.beeps = (e.target.value === "Aan"); slaInstellingenOp(); });
 if (selectTrillen) selectTrillen.addEventListener("change", (e) => { instellingen.vibrate = (e.target.value === "Aan"); slaInstellingenOp(); });
 
-// ===== EXTRA VANGNET: SCHERM-WISSEL SYNCHRONISATIE =====
+// Vangnet: Als de gebruiker handmatig switcht van app en terugkomt, activeer lock opnieuw indien nodig
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && timerLoopt) {
-    updateUI(); // Forceert direct een frisse UI update zodra het scherm uit de broekzak komt
+  if (document.visibilityState === "visible") {
+    updateUI();
+    if (timerLoopt) {
+      activeerWakeLock();
+    }
   }
 });
 
